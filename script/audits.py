@@ -33,8 +33,7 @@ def filter_files(start_date=first_arg, end_date=second_arg):
     for root, dirs, files in os.walk(dir):
         for file in files:
             # construct the path for each file
-            path = root + "/" + file
-            # skip files that aren't relevant
+            path = f"{root}/{file}"
             if ("all.md" in path or "_index.md" in path or "retired-" in path
                     or "png" in path or "jpg" in path or "svg" in path or "jpeg" in path
                     or "PNG" in path or "JPG" in path or "SVG" in path or "JPEG" in path
@@ -42,86 +41,71 @@ def filter_files(start_date=first_arg, end_date=second_arg):
                     or "DS_Store" in path or "cloud-queues" in path or len
                     (path) < 11):
                 continue
-            else:
-                # open the file and read the content
-                text = open(path, 'r+')
-                lines = text.readlines()
+            # open the file and read the content
+            text = open(path, 'r+')
+            lines = text.readlines()
                 # skip files that don't have at least 3 lines
-                if len(lines) < 2:
+            if len(lines) >= 2:
+                # set the audit_date variable (as the 3rd list item in
+                # "lines")
+                audit_date = lines[2]
+                if len(audit_date) < 13 or "-" not in audit_date:
                     continue
-                else:
-                    # set the audit_date variable (as the 3rd list item in
-                    # "lines")
-                    audit_date = lines[2]
-                    #print("path: " + path)
-                    # if the line at index 2 isn't a date, skip
-                    if len(audit_date) < 13 or "-" not in audit_date:
-                        continue
-                    else:
-                        try:
-                            # convert the audit_date to a list so it can be
-                            # sliced
-                            audit_date_list = list(audit_date)
-                            # Slice audit_date_list to get chars at indexes
-                            # 13-22
-                            # only, then join those chars
-                            audit_date_slice = "".join(audit_date_list[13:23])
-                            # convert audit_date_slice to date format
-                            # print("audit date slice: " + audit_date_slice)
-                            audit_date_final = datetime.datetime.strptime(audit_date_slice,'%Y-%m-%d').date()
-                            #print(audit_date_final)
-                        # if the index value is out of range, print the name
-                        # of the offending file to get more info & correct
-                        # the issue
-                        except ValueError:
-                            print("There's a problem with the audit date "
-                                  " in the file at " + path)
+                try:
+                    # convert the audit_date to a list so it can be
+                    # sliced
+                    audit_date_list = list(audit_date)
+                    # Slice audit_date_list to get chars at indexes
+                    # 13-22
+                    # only, then join those chars
+                    audit_date_slice = "".join(audit_date_list[13:23])
+                    # convert audit_date_slice to date format
+                    # print("audit date slice: " + audit_date_slice)
+                    audit_date_final = datetime.datetime.strptime(audit_date_slice,'%Y-%m-%d').date()
+                    #print(audit_date_final)
+                # if the index value is out of range, print the name
+                # of the offending file to get more info & correct
+                # the issue
+                except ValueError:
+                    print("There's a problem with the audit date "
+                          " in the file at " + path)
                         # if the file's audit date is between the dates
                         # provided by the info dev, print the results
-                        if audit_date_final >= start_date and \
+                if audit_date_final >= start_date and \
                            audit_date_final <= end_date:
-                            # Create the published link for the file
-                            # First, convert the file name to a list and strip
-                            # the .md file extension from it
-                            #file = list(file)
-                            #del file[-1:-4:-1]
-                            # Then, join the rest of the file name back
-                            # together
-                            #file = "".join(file)
+                    # Create the published link for the file
+                    # First, convert the file name to a list and strip
+                    # the .md file extension from it
+                    #file = list(file)
+                    #del file[-1:-4:-1]
+                    # Then, join the rest of the file name back
+                    # together
+                    #file = "".join(file)
 
-                            # Get the last directory of the root, which should be the # article folder, which is also it's name
-                            #print root
-                            if os.path.isdir(root):
-                                articlefolder = os.path.basename(root)
+                    # Get the last directory of the root, which should be the # article folder, which is also it's name
+                    #print root
+                    if os.path.isdir(root):
+                        articlefolder = os.path.basename(root)
 
                             # Compose the link for each file
                             #link = "https://docs.rackspace.com/support/how-to/" + file + "/"
-                            link = "https://docs.rackspace.com/support/how-to/" + articlefolder + "/"
+                    link = f"https://docs.rackspace.com/support/how-to/{articlefolder}/"
 
-                            # Append the file name and link to "info"
-                            info.append([audit_date_slice, path, link])
-                            # Increment the counter
-                            count += 1
-                        else:
-                            continue
-    # Write file and link to a spreadsheet
-    # Start from the second cell. Rows and columns are zero-indexed.
-    row = 0
+                    # Append the file name and link to "info"
+                    info.append([audit_date_slice, path, link])
+                    # Increment the counter
+                    count += 1
     col = 0
     # write file and link
     # Loop through the items inside the "info" *list of lists*
-    for grouping in (info):
+    for row, grouping in enumerate(info):
         worksheet.write(row, col, info[row][0])
         worksheet.write(row, col + 1, info[row][1])
         worksheet.write(row, col + 2, info[row][2])
-        row += 1
     # print a success message
-    print("\nSuccess! There are {} How-To articles that fit your criteria. "
-          " \n \n"
-          "YOUR RESULTS HAVE BEEN SAVED TO ..FILES/H2-AUDITS.XLSX. \n \n"
-          "To make this information editable for all Info Devs, copy and paste"
-          " the content into a new Excel file in O365 online and share it. "
-          "\n".format(count))
+    print(
+        f"\nSuccess! There are {count} How-To articles that fit your criteria.  \n \nYOUR RESULTS HAVE BEEN SAVED TO ..FILES/H2-AUDITS.XLSX. \n \nTo make this information editable for all Info Devs, copy and paste the content into a new Excel file in O365 online and share it. \n"
+    )
 
 
 if __name__ == "__main__":
